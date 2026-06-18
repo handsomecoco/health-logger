@@ -44,7 +44,7 @@
   </table>
 
   <script>
-    const API = 'http://localhost:8080/health-logs';
+    const API = '/health-logs';
 
     async function loadAll() {
       const data = await fetch(API).then(r => r.json());

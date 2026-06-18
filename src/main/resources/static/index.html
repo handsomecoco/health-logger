@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <title>智慧健康日誌</title>
+  <style>
+    body { font-family: sans-serif; max-width: 900px; margin: 2rem auto; padding: 0 1rem; background: #f9f9f9; }
+    h1 { color: #333; }
+    .form-card { background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); margin-bottom: 2rem; }
+    .form-row { display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem; }
+    .form-row label { display: flex; flex-direction: column; font-size: 13px; color: #666; gap: 4px; }
+    input[type=number], input[type=date] { padding: 8px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; width: 140px; }
+    button { padding: 10px 24px; background: #4f8ef7; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; }
+    button:hover { background: #3a7ae0; }
+    table { width: 100%; border-collapse: collapse; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+    th { background: #f0f4ff; padding: 10px 14px; text-align: left; font-size: 13px; color: #555; }
+    td { padding: 10px 14px; border-top: 1px solid #f0f0f0; font-size: 14px; }
+    .badge { padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; }
+    .低風險 { background: #d4edda; color: #155724; }
+    .中風險 { background: #fff3cd; color: #856404; }
+    .高風險 { background: #f8d7da; color: #721c24; }
+  </style>
+</head>
+<body>
+  <h1>🏃 智慧健康日誌系統</h1>
+
+  <div class="form-card">
+    <h3 style="margin-top:0">新增今日紀錄</h3>
+    <div class="form-row">
+      <label>日期 <input type="date" id="logDate" /></label>
+      <label>睡眠時數 <input type="number" id="sleepHours" step="0.5" min="0" max="24" placeholder="7.5" /></label>
+      <label>步數 <input type="number" id="steps" placeholder="6000" /></label>
+      <label>心情分數(1-10) <input type="number" id="moodScore" min="1" max="10" placeholder="7" /></label>
+    </div>
+    <button onclick="addLog()">新增紀錄</button>
+  </div>
+
+  <h3>📋 歷史紀錄</h3>
+  <table>
+    <thead>
+      <tr><th>日期</th><th>睡眠(hr)</th><th>步數</th><th>心情</th><th>風險等級</th><th>操作</th></tr>
+    </thead>
+    <tbody id="tableBody"></tbody>
+  </table>
+
+  <script>
+    const API = 'http://localhost:8080/health-logs';
+
+    async function loadAll() {
+      const data = await fetch(API).then(r => r.json());
+      // 依日期由新到舊排序
+      data.sort((a, b) => b.logDate.localeCompare(a.logDate));
+      document.getElementById('tableBody').innerHTML = data.map(log => `
+        <tr>
+          <td>${log.logDate}</td>
+          <td>${log.sleepHours}</td>
+          <td>${log.steps.toLocaleString()}</td>
+          <td>${log.moodScore} / 10</td>
+          <td><span class="badge ${log.riskLevel}">${log.riskLevel}</span></td>
+          <td><button style="padding:4px 10px;font-size:12px;background:#e74c3c" onclick="deleteLog(${log.id})">刪除</button></td>
+        </tr>
+      `).join('');
+    }
+
+    async function addLog() {
+      const body = {
+        logDate: document.getElementById('logDate').value,
+        sleepHours: parseFloat(document.getElementById('sleepHours').value),
+        steps: parseInt(document.getElementById('steps').value),
+        moodScore: parseInt(document.getElementById('moodScore').value)
+      };
+      if (!body.logDate || isNaN(body.sleepHours) || isNaN(body.steps) || isNaN(body.moodScore)) {
+        alert('請填寫所有欄位！'); return;
+      }
+      await fetch(API, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      loadAll();
+    }
+
+    async function deleteLog(id) {
+      await fetch(`${API}/${id}`, { method: 'DELETE' });
+      loadAll();
+    }
+
+    loadAll();
+  </script>
+</body>
+</html>
